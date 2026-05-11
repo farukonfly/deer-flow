@@ -1,0 +1,12 @@
+{
+  "folders": [
+    {
+      "name": "deer-flow",
+      "path": "."
+    },
+    {
+      "name": "ABACUS-agent-tools",
+      "path": "../ABACUS-agent-tools"
+    }
+  ]
+}
