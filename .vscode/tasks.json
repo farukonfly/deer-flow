@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Kill all services",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "pkill -9 -f 'next dev|next start|uvicorn app.gateway|nginx -g' || true; sleep 2"
+      ],
+      "isBackground": false,
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "Start Frontend",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd ${workspaceFolder}/frontend && pnpm run dev"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Ready in.*$",
+          "endsPattern": "^.*Ready in.*$"
+        }
+      },
+      "dependsOn": ["Kill all services"],
+      "presentation": {
+        "group": "services",
+        "order": 1
+      }
+    },
+    {
+      "label": "Start Nginx",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp && if ss -ltn 'sport = :2026' | grep -q ':2026'; then echo 'Nginx is already listening on port 2026; skip start.'; exit 0; fi && nginx -g \"daemon off;\" -c \"${workspaceFolder}/docker/nginx/nginx.local.conf\" -p \"${workspaceFolder}\" > logs/nginx.log 2>&1",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*$",
+          "endsPattern": "^.*$"
+        }
+      },
+      "dependsOn": ["Start Frontend"],
+      "presentation": {
+        "group": "services",
+        "order": 2
+      }
+    }
+  ]
+}
+
