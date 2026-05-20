@@ -97,3 +97,113 @@ test("hides internal todo reminder messages from message groups", () => {
     groups.flatMap((group) => group.messages).map((message) => message.id),
   ).toEqual(["human-1", "ai-1"]);
 });
+
+test("renders summary control message as summary hint group", () => {
+  const messages = [
+    {
+      id: "summary-1",
+      type: "human",
+      name: "summary",
+      content: "SESSION INTENT...",
+    },
+    {
+      id: "ai-1",
+      type: "ai",
+      content: "Visible assistant response",
+    },
+  ] as Message[];
+
+  const groups = getMessageGroups(messages);
+
+  expect(groups.map((group) => group.type)).toEqual(["summary", "assistant"]);
+  expect(groups[0]?.messages[0]?.id).toBe("summary-1");
+});
+
+test("normalizes summary control message names before matching", () => {
+  const messages = [
+    {
+      id: "summary-1",
+      type: "human",
+      name: " Summary ",
+      content: "SESSION INTENT...",
+    },
+    {
+      id: "summary-2",
+      type: "human",
+      name: "SUMMARY_META",
+      content: "SESSION INTENT...",
+    },
+    {
+      id: "ai-1",
+      type: "ai",
+      content: "Visible assistant response",
+    },
+  ] as Message[];
+
+  const groups = getMessageGroups(messages);
+
+  expect(groups.map((group) => group.type)).toEqual([
+    "summary",
+    "summary",
+    "assistant",
+  ]);
+});
+
+test("treats session intent summary payload as summary control message", () => {
+  const messages = [
+    {
+      id: "summary-1",
+      type: "human",
+      content:
+        "SESSION INTENT\nThe user needs help.\n\nSUMMARY\n- point one\n- point two",
+    },
+    {
+      id: "ai-1",
+      type: "ai",
+      content: "Visible assistant response",
+    },
+  ] as Message[];
+
+  const groups = getMessageGroups(messages);
+
+  expect(groups.map((group) => group.type)).toEqual(["summary", "assistant"]);
+});
+
+test("treats markdown heading style summary payload as summary control message", () => {
+  const messages = [
+    {
+      id: "summary-1",
+      type: "human",
+      content:
+        "## SESSION INTENT\nUser needs help.\n\n## SUMMARY\n- point one\n- point two",
+    },
+    {
+      id: "ai-1",
+      type: "ai",
+      content: "Visible assistant response",
+    },
+  ] as Message[];
+
+  const groups = getMessageGroups(messages);
+
+  expect(groups.map((group) => group.type)).toEqual(["summary", "assistant"]);
+});
+
+test("treats partial session intent heading as summary control message", () => {
+  const messages = [
+    {
+      id: "summary-1",
+      type: "human",
+      content: "SESSION INTENT\nThe user wants help writing...",
+    },
+    {
+      id: "ai-1",
+      type: "ai",
+      content: "Visible assistant response",
+    },
+  ] as Message[];
+
+  const groups = getMessageGroups(messages);
+
+  expect(groups.map((group) => group.type)).toEqual(["summary", "assistant"]);
+});

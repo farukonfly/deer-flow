@@ -177,6 +177,8 @@ export interface Translations {
   conversation: {
     noMessages: string;
     startConversation: string;
+    compactingConversation: string;
+    compactedConversation: string;
   };
 
   // Chats

@@ -39,6 +39,7 @@ import { useI18n } from "@/core/i18n/hooks";
 import {
   extractContentFromMessage,
   extractReasoningContentFromMessage,
+  isSummaryControlMessage,
   parseUploadedFiles,
   stripUploadedFilesTag,
   type FileInMessage,
@@ -135,6 +136,10 @@ export function MessageListItem({
   runId?: string;
   showCopyButton?: boolean;
 }) {
+  if (isSummaryControlMessage(message)) {
+    return null;
+  }
+
   const isHuman = message.type === "human";
   return (
     <AIElementMessage

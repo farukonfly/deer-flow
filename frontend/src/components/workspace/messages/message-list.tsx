@@ -268,6 +268,26 @@ export function MessageList({
         {groupedMessages.map((group, groupIndex) => {
           const turnUsageMessages = turnUsageMessagesByGroupIndex[groupIndex];
 
+
+          // Render summary as a compaction hint only, never as user-visible content.
+          if (group.type === "summary") {
+            const hasNewerConversationGroups = groupedMessages
+              .slice(groupIndex + 1)
+              .some((nextGroup) => nextGroup.type !== "summary");
+            const isCompacting =
+              thread.isLoading && !hasNewerConversationGroups;
+
+            return (
+              <div key={group.id} className="w-full flex justify-center">
+                <div className="my-4 rounded-lg border border-dashed px-4 py-2 text-muted-foreground text-sm bg-background/80">
+                  {isCompacting
+                    ? t.conversation.compactingConversation
+                    : t.conversation.compactedConversation}
+                </div>
+              </div>
+            );
+          }
+
           if (group.type === "human" || group.type === "assistant") {
             return (
               <div

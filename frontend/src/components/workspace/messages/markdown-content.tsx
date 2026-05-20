@@ -7,6 +7,7 @@ import {
   MessageResponse,
   type MessageResponseProps,
 } from "@/components/ai-elements/message";
+import { isConversationSummaryText } from "@/core/messages/utils";
 import { streamdownPlugins } from "@/core/streamdown";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,7 @@ export function MarkdownContent({
     };
   }, [componentsFromProps]);
 
-  if (!content) return null;
+  if (!content || isConversationSummaryText(content)) return null;
 
   return (
     <MessageResponse

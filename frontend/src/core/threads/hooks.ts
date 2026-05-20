@@ -11,7 +11,10 @@ import { getAPIClient } from "../api";
 import { fetch } from "../api/fetcher";
 import { getBackendBaseURL } from "../config";
 import { useI18n } from "../i18n/hooks";
-import type { FileInMessage } from "../messages/utils";
+import {
+  isSummaryControlMessage,
+  type FileInMessage,
+} from "../messages/utils";
 import type { LocalSettings } from "../settings";
 import { useUpdateSubtask } from "../tasks/context";
 import type { UploadedFileInfo } from "../uploads";
@@ -253,7 +256,7 @@ export function useThreadStream({
           return;
         }
         for (const m of _messages) {
-          if (m.name === "summary" && m.type === "human") {
+          if (isSummaryControlMessage(m)) {
             summarizedRef.current?.add(m.id ?? "");
           }
         }

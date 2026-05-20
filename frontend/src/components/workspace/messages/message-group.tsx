@@ -30,6 +30,7 @@ import type { TokenDebugStep } from "@/core/messages/usage-model";
 import {
   extractReasoningContentFromMessage,
   findToolCallResult,
+  isConversationSummaryText,
 } from "@/core/messages/utils";
 import { useRehypeSplitWordsIntoSpans } from "@/core/rehype";
 import { extractTitleFromMarkdown } from "@/core/utils/markdown";
@@ -706,7 +707,7 @@ function convertToSteps(messages: Message[]): CoTStep[] {
   for (const message of messages) {
     if (message.type === "ai") {
       const reasoning = extractReasoningContentFromMessage(message);
-      if (reasoning) {
+      if (reasoning && !isConversationSummaryText(reasoning)) {
         const step: CoTReasoningStep = {
           id: message.id,
           messageId: message.id,

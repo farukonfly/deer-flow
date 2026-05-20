@@ -234,6 +234,8 @@ export const zhCN: Translations = {
   conversation: {
     noMessages: "还没有消息",
     startConversation: "开始新的对话以查看消息",
+    compactingConversation: "正在压缩对话...",
+    compactedConversation: "对话已压缩。",
   },
 
   // Chats

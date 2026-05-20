@@ -246,6 +246,8 @@ export const enUS: Translations = {
   conversation: {
     noMessages: "No messages yet",
     startConversation: "Start a conversation to see messages here",
+    compactingConversation: "Compacting conversation...",
+    compactedConversation: "Compacted conversation.",
   },
 
   // Chats

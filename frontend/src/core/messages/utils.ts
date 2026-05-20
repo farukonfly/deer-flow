@@ -18,20 +18,85 @@ interface AssistantClarificationGroup extends GenericMessageGroup<"assistant:cla
 
 interface AssistantSubagentGroup extends GenericMessageGroup<"assistant:subagent"> {}
 
+interface SummaryMessageGroup extends GenericMessageGroup<"summary"> {}
+
 export type MessageGroup =
   | HumanMessageGroup
   | AssistantProcessingGroup
   | AssistantMessageGroup
   | AssistantPresentFilesGroup
   | AssistantClarificationGroup
-  | AssistantSubagentGroup;
+  | AssistantSubagentGroup
+  | SummaryMessageGroup;
 
 const HIDDEN_CONTROL_MESSAGE_NAMES = new Set([
-  "summary",
   "loop_warning",
   "todo_reminder",
   "todo_completion_reminder",
 ]);
+
+function getNormalizedMessageName(message: Message) {
+  if (typeof message.name !== "string") {
+    return undefined;
+  }
+  return message.name.trim().toLowerCase();
+}
+
+function getMessagePlainText(message: Message) {
+  if (typeof message.content === "string") {
+    return message.content;
+  }
+  if (Array.isArray(message.content)) {
+    return message.content
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join("\n");
+  }
+  return "";
+}
+
+export function isConversationSummaryText(text: string) {
+  const normalized = text.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  const upper = normalized.toUpperCase();
+  const hasSessionIntent =
+    /(^|\n)\s{0,3}(?:[#>*-]+\s*)?SESSION\s+INTENT\b/m.test(upper) ||
+    upper.startsWith("SESSION INTENT");
+  const hasSummary =
+    /(^|\n)\s{0,3}(?:[#>*-]+\s*)?SUMMARY\b/m.test(upper) ||
+    upper.includes("\nSUMMARY");
+  const hasSummaryPreamble =
+    /(^|\n)\s{0,3}(?:[#>*-]+\s*)?HERE\s+IS\s+A\s+SUMMARY\s+OF\s+THE\s+CONVERSATION\s+TO\s+DATE\b/m.test(
+      upper,
+    );
+
+  // Streaming can briefly expose only the leading section (e.g. just SESSION INTENT).
+  // Hide as soon as we identify this control-summary shape.
+  return hasSummaryPreamble || hasSessionIntent || (hasSessionIntent && hasSummary);
+}
+
+function looksLikeConversationSummaryPayload(message: Message) {
+  const text = getMessagePlainText(message).trim();
+  if (!text) {
+    return false;
+  }
+  return isConversationSummaryText(text);
+}
+
+export function isSummaryControlMessage(message: Message) {
+  const normalizedName = getNormalizedMessageName(message);
+  if (!normalizedName) {
+    return looksLikeConversationSummaryPayload(message);
+  }
+  return (
+    normalizedName === "summary" ||
+    normalizedName.startsWith("summary_") ||
+    normalizedName.startsWith("summary:") ||
+    looksLikeConversationSummaryPayload(message)
+  );
+}
 
 export function getMessageGroups(messages: Message[]): MessageGroup[] {
   if (messages.length === 0) {
@@ -55,7 +120,14 @@ export function getMessageGroups(messages: Message[]): MessageGroup[] {
     return null;
   }
 
+
   for (const message of messages) {
+    // Preserve compaction hints in timeline while keeping summary content hidden.
+    if (isSummaryControlMessage(message)) {
+      groups.push({ id: message.id, type: "summary", messages: [message] });
+      continue;
+    }
+
     if (isHiddenFromUIMessage(message)) {
       continue;
     }
@@ -67,8 +139,6 @@ export function getMessageGroups(messages: Message[]): MessageGroup[] {
 
     if (message.type === "tool") {
       if (isClarificationToolMessage(message)) {
-        // Add to the preceding processing group to preserve tool-call association,
-        // then also open a standalone clarification group for prominent display.
         lastOpenGroup()?.messages.push(message);
         groups.push({
           id: message.id,
@@ -104,7 +174,6 @@ export function getMessageGroups(messages: Message[]): MessageGroup[] {
         });
       } else if (hasReasoning(message) || hasToolCalls(message)) {
         const lastGroup = groups[groups.length - 1];
-        // Accumulate consecutive intermediate AI messages into one processing group.
         if (lastGroup?.type !== "assistant:processing") {
           groups.push({
             id: message.id,
@@ -115,9 +184,6 @@ export function getMessageGroups(messages: Message[]): MessageGroup[] {
           lastGroup.messages.push(message);
         }
       }
-
-      // Not an else-if: a message with reasoning + content (but no tool calls) goes
-      // into the processing group above AND gets its own assistant bubble here.
       if (hasContent(message) && !hasToolCalls(message)) {
         groups.push({ id: message.id, type: "assistant", messages: [message] });
       }
@@ -369,10 +435,12 @@ export function findToolCallResult(toolCallId: string, messages: Message[]) {
 }
 
 export function isHiddenFromUIMessage(message: Message) {
+  const normalizedName = getNormalizedMessageName(message);
   return (
     message.additional_kwargs?.hide_from_ui === true ||
-    (typeof message.name === "string" &&
-      HIDDEN_CONTROL_MESSAGE_NAMES.has(message.name))
+    isSummaryControlMessage(message) ||
+    (normalizedName !== undefined &&
+      HIDDEN_CONTROL_MESSAGE_NAMES.has(normalizedName))
   );
 }
 
